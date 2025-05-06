@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Aplikasi AbidinAI</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      text-align: center;
+      background-color: #000000;
+      color: white;
+      padding: 20px;
+      height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      margin: 0;
+    }
+    #container {
+      max-width: 300px;
+      background: rgba(255, 255, 255, 0.1);
+      padding: 20px;
+      border-radius: 10px;
+      box-shadow: 0 0 15px rgba(0, 255, 255, 0.5);
+    }
+    #chatbox {
+      width: 90%;
+      height: 300px;
+      border: 1px solid cyan;
+      padding: 15px;
+      overflow-y: auto;
+      text-align: left;
+      background: black;
+      border-radius: 10px;
+      white-space: pre-line;
+    }
+    input, button {
+      padding: 10px;
+      margin-top: 10px;
+      width: 100%;
+      border-radius: 5px;
+      border: none;
+      outline: none;
+    }
+    input {
+      background: #000000;
+      color: white;
+    }
+    button {
+      background: cyan;
+      color: black;
+      font-weight: bold;
+      cursor: pointer;
+    }
+    button:hover {
+      background: #00ffff;
+    }
+    .audio-btn {
+      background: black;
+      color: cyan;
+      border: 2px solid cyan;
+      padding: 10px 20px;
+      border-radius: 5px;
+      cursor: pointer;
+      display: inline-block;
+      font-size: 16px;
+      box-shadow: 0 0 10px cyan;
+    }
+    .audio-btn:hover {
+      background: cyan;
+      color: black;
+    }
+    .loading {
+      display: inline-block;
+      width: 20px;
+      height: 20px;
+      border: 3px solid rgba(0, 255, 255, 0.3);
+      border-radius: 50%;
+      border-top-color: cyan;
+      animation: spin 1s ease-in-out infinite;
+    }
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+  </style>
+</head>
+<body>
+  <div id="container">
+    <audio id="audioPlayer" src="https://d.top4top.io/m_33403we8x0.mp3" loop autoplay></audio>
+    <button id="playBtn" class="audio-btn" onclick="toggleAudio()">▶ Putar Musik</button>
+    <p><b style="color: white;">Developer : Abidin</b></p>
+    <img id="jarvis-img" src="https://ucefea130118e94db9342e9fe812.previews.dropboxusercontent.com/p/thumb/ACpEjwqlzpUQhfsNaMHGsMG4-H97ihoQFP4tSasiHOruO6JGbjNHWDbkm3lcnnhUC5Ds_vB0Vl5FXZECNSaFYzfJe9Q6pyNNBXAf8wM1n2U8r8PFU7VN7ouO9EqlchP6w6BNENuqs0Wc_MDNxwFvAgw2ekbc-tQ6V4-DRNJJKbaB-Cy5pquwxsT_D2x54mH2uKfBkT7TMqcjaRORxI-v6B-95Ek2gudKdbiEA1d0zcDT-PQ__wNRcwDBq9aaR_-DRf8F3lNmy52owDgQSU1PZXF70uesFgupaXZjVQzRJbdefgP24vQ0NiwhUkniLAM7PWS7jIQLMwb5WKvCCkIHCdhQEe-uaA0MclRoRjGnWBumLCrH0dcgE7Ru3D-pPuUn2ZC5y0aB04cxU3oq0K4zyMgn/p.jpeg?is_prewarmed=true" alt="AbidinAI" style="width: 300px; height: auto; margin-bottom: 10px; display: block; margin: 0 auto;">
+    <div id="chatbox"></div>
+    <input type="text" id="messageInput" placeholder="Ketik pesan..." onkeypress="handleKeyPress(event)">
+    <button onclick="sendMessage()" id="sendButton">Kirim</button>
+    <button onclick="startVoiceRecognition()" class="audio-btn">🎤 Bicara</button>
+  </div>
+
+  <script>
+    let isVoiceInput = false;
+
+    function handleKeyPress(event) {
+      if (event.key === 'Enter') sendMessage();
+    }
+
+    async function sendMessage() {
+      const userMessage = document.getElementById("messageInput").value.trim();
+      if (!userMessage) return;
+
+      const chatbox = document.getElementById("chatbox");
+      const sendButton = document.getElementById("sendButton");
+
+      chatbox.innerHTML += `<p><strong>Anda:</strong> ${userMessage}</p>`;
+      document.getElementById("messageInput").value = "";
+
+      const loadingId = 'loading-' + Date.now();
+      chatbox.innerHTML += `<p id="${loadingId}"><strong>AbidinAI:</strong> <span class="loading"></span> Mengetik...</p>`;
+      chatbox.scrollTop = chatbox.scrollHeight;
+      sendButton.disabled = true;
+
+      try {
+        const response = await fetch("/chat", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({ message: userMessage })
+        });
+
+        const data = await response.json();
+        if (data.reply) {
+          let aiReply = data.reply;
+          aiReply = aiReply.replace(/Google/gi, "Abidin").replace(/\/g, "").replace(/\*/g, "").replace(/
+/g, "<br>");
+          document.getElementById(loadingId).outerHTML = `<p><strong>AbidinAI:</strong><br>${aiReply}</p>`;
+          if (isVoiceInput) speak(aiReply);
+        } else {
+          throw new Error("Respons kosong dari server.");
+        }
+
+      } catch (error) {
+        document.getElementById(loadingId).outerHTML = `<p style="color: red;"><strong>Error:</strong> ${error.message}</p>`;
+      } finally {
+        sendButton.disabled = false;
+        chatbox.scrollTop = chatbox.scrollHeight;
+        isVoiceInput = false;
+      }
+    }
+
+    function toggleAudio() {
+      const audio = document.getElementById("audioPlayer");
+      const playBtn = document.getElementById("playBtn");
+      if (audio.paused) {
+        audio.play();
+        playBtn.innerHTML = "⏸ Pause Musik";
+      } else {
+        audio.pause();
+        playBtn.innerHTML = "▶ Lanjutkan Musik";
+      }
+    }
+
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    let recognition;
+
+    if (SpeechRecognition) {
+      recognition = new SpeechRecognition();
+      recognition.lang = 'id-ID';
+      recognition.interimResults = false;
+      recognition.maxAlternatives = 1;
+
+      recognition.onresult = (event) => {
+        const voiceText = event.results[0][0].transcript;
+        document.getElementById("messageInput").value = voiceText;
+        isVoiceInput = true;
+        sendMessage();
+      };
+
+      recognition.onerror = (event) => {
+        alert('Gagal mengenali suara: ' + event.error);
+      };
+    } else {
+      alert("Browser tidak mendukung pengenalan suara.");
+    }
+
+    function startVoiceRecognition() {
+      if (recognition) {
+        isVoiceInput = true;
+        recognition.start();
+      }
+    }
+
+    function speak(text) {
+      const cleanText = text.replace(/<br>/g, ' ').replace(/<\/?[^>]+(>|$)/g, " ");
+      const sentences = cleanText.match(/[^.!?]+[.!?]?/g) || [cleanText];
+
+      const utterances = sentences.map(sentence => {
+        const utterance = new SpeechSynthesisUtterance(sentence.trim());
+        utterance.lang = 'id-ID';
+        return utterance;
+      });
+
+      function speakSequentially(index) {
+        if (index < utterances.length) {
+          window.speechSynthesis.speak(utterances[index]);
+          utterances[index].onend = () => speakSequentially(index + 1);
+        }
+      }
+
+      window.speechSynthesis.cancel();
+      speakSequentially(0);
+    }
+  </script>
+</body>
+</html>
