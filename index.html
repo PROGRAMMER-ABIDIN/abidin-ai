@@ -5,190 +5,41 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Aplikasi AbidinAI</title>
   <style>
-    body {
-      font-family: Arial, sans-serif;
-      text-align: center;
-      background-color: #000000;
-      color: white;
-      padding: 20px;
-      height: 100vh;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      margin: 0;
-    }
-    #container {
-      max-width: 300px;
-      background: rgba(255, 255, 255, 0.1);
-      padding: 20px;
-      border-radius: 10px;
-      box-shadow: 0 0 15px rgba(0, 255, 255, 0.5);
-    }
-    #chatbox {
-      width: 90%;
-      height: 300px;
-      border: 1px solid cyan;
-      padding: 15px;
-      overflow-y: auto;
-      text-align: left;
-      background: rgb(0, 0, 0);
-      border-radius: 10px;
-      white-space: pre-line;
-    }
-    input, button {
-      padding: 10px;
-      margin-top: 10px;
-      width: 100%;
-      border-radius: 5px;
-      border: none;
-      outline: none;
-    }
-    input {
-      width: 91%;
-      background: #000000;
-      color: white;
-    }
-    button {
-      background: cyan;
-      color: black;
-      font-weight: bold;
-      cursor: pointer;
-    }
-    button:hover {
-      background: #00ffff;
-    }
-    .audio-btn {
-      background: black;
-      color: cyan;
-      border: 2px solid cyan;
-      padding: 10px 20px;
-      border-radius: 5px;
-      cursor: pointer;
-      display: inline-block;
-      font-size: 16px;
-      box-shadow: 0 0 10px cyan;
-    }
-    .audio-btn:hover {
-      background: cyan;
-      color: black;
-    }
-    .loading {
-      display: inline-block;
-      width: 20px;
-      height: 20px;
-      border: 3px solid rgba(0, 255, 255, 0.3);
-      border-radius: 50%;
-      border-top-color: cyan;
-      animation: spin 1s ease-in-out infinite;
-    }
-    @keyframes spin {
-      to { transform: rotate(360deg); }
-    }
+    body { font-family: Arial; background: black; color: white; text-align: center; padding: 20px; }
+    #chatbox { height: 300px; overflow-y: auto; border: 1px solid cyan; padding: 10px; margin-bottom: 10px; border-radius: 10px; background: #000; }
+    input, button { padding: 10px; width: 90%; margin: 5px; border-radius: 5px; }
+    button { background: cyan; color: black; font-weight: bold; cursor: pointer; }
   </style>
 </head>
 <body>
-  <div id="container">
-    <audio id="audioPlayer" src="https://d.top4top.io/m_33403we8x0.mp3" loop autoplay></audio>
-    <button id="playBtn" class="audio-btn" onclick="toggleAudio()">▶ Putar Musik</button>
-    <p><b style="color: white;">Developer : Abidin</b></p>
-    <img id="jarvis-img" src="https://i.imgur.com/cgermtO.jpeg" alt="AbidinAI" style="width: 300px; margin-bottom: 10px; display: block; margin: 0 auto;">
-    <div id="chatbox"></div>
-    <input type="text" id="messageInput" placeholder="Ketik pesan..." onkeypress="handleKeyPress(event)">
-    <button onclick="sendMessage()" id="sendButton">Kirim</button>
-    <button onclick="startVoiceRecognition()" class="audio-btn">🎤 Bicara</button>
-  </div>
+  <h2>AbidinAI</h2>
+  <div id="chatbox"></div>
+  <input type="text" id="messageInput" placeholder="Tulis pesan...">
+  <button onclick="sendMessage()">Kirim</button>
 
   <script>
-    let isVoiceInput = false;
-
-    function handleKeyPress(event) {
-      if (event.key === 'Enter') sendMessage();
-    }
-
     async function sendMessage() {
-      const userMessage = document.getElementById("messageInput").value.trim();
-      if (!userMessage) return;
+      const input = document.getElementById("messageInput");
+      const message = input.value.trim();
+      if (!message) return;
 
       const chatbox = document.getElementById("chatbox");
-      const sendButton = document.getElementById("sendButton");
+      chatbox.innerHTML += `<p><strong>Anda:</strong> ${message}</p>`;
+      input.value = "";
 
-      chatbox.innerHTML += `<p><strong>Anda:</strong> ${userMessage}</p>`;
-      document.getElementById("messageInput").value = "";
-
-      const loadingId = 'loading-' + Date.now();
-      chatbox.innerHTML += `<p id="${loadingId}"><strong>AbidinAI:</strong> <span class="loading"></span> Mengetik...</p>`;
+      chatbox.innerHTML += `<p><strong>AbidinAI:</strong> <em>Mengetik...</em></p>`;
       chatbox.scrollTop = chatbox.scrollHeight;
-      sendButton.disabled = true;
 
-      try {
-        const response = await fetch("/api/chat", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ message: userMessage })
-        });
+      const response = await fetch("/api/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ contents: [{ parts: [{ text: message }] }] })
+      });
 
-        const data = await response.json();
-        let aiReply = data.candidates?.[0]?.content?.parts?.[0]?.text || "Maaf, tidak ada jawaban.";
-
-        aiReply = aiReply.replace(/Google/gi, "Abidin").replace(/\n/g, "<br>");
-        document.getElementById(loadingId).outerHTML = `<p><strong>AbidinAI:</strong><br>${aiReply}</p>`;
-
-        if (isVoiceInput) speak(aiReply);
-
-      } catch (error) {
-        document.getElementById(loadingId).outerHTML = `<p style="color:red;"><strong>Error:</strong> ${error.message}</p>`;
-      } finally {
-        sendButton.disabled = false;
-        chatbox.scrollTop = chatbox.scrollHeight;
-        isVoiceInput = false;
-      }
-    }
-
-    function toggleAudio() {
-      const audio = document.getElementById("audioPlayer");
-      const playBtn = document.getElementById("playBtn");
-      if (audio.paused) {
-        audio.play();
-        playBtn.innerHTML = "⏸ Pause Musik";
-      } else {
-        audio.pause();
-        playBtn.innerHTML = "▶ Lanjutkan Musik";
-      }
-    }
-
-    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-    let recognition;
-
-    if (SpeechRecognition) {
-      recognition = new SpeechRecognition();
-      recognition.lang = 'id-ID';
-      recognition.interimResults = false;
-      recognition.maxAlternatives = 1;
-      recognition.onresult = (event) => {
-        const voiceText = event.results[0][0].transcript;
-        document.getElementById("messageInput").value = voiceText;
-        isVoiceInput = true;
-        sendMessage();
-      };
-      recognition.onerror = (event) => {
-        alert('Gagal mengenali suara: ' + event.error);
-      };
-    } else {
-      alert("Browser tidak mendukung pengenalan suara.");
-    }
-
-    function startVoiceRecognition() {
-      if (recognition) {
-        isVoiceInput = true;
-        recognition.start();
-      }
-    }
-
-    function speak(text) {
-      const utterance = new SpeechSynthesisUtterance(text.replace(/<br>/g, ' '));
-      utterance.lang = 'id-ID';
-      speechSynthesis.cancel();
-      speechSynthesis.speak(utterance);
+      const data = await response.json();
+      const text = data?.candidates?.[0]?.content?.parts?.[0]?.text || "Maaf, tidak ada jawaban.";
+      chatbox.innerHTML += `<p><strong>AbidinAI:</strong> ${text}</p>`;
+      chatbox.scrollTop = chatbox.scrollHeight;
     }
   </script>
 </body>
